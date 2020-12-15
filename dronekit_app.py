@@ -7,7 +7,7 @@ print("Connecting")
 connection_string = '127.0.0.1:14540'
 vehicle = connect(connection_string, wait_ready=True)
 
-aTargetAltitude = 3
+aTargetAltitude = 10
 
 # Display basic vehicle state
 print(" Type: %s" % vehicle._vehicle_type)
