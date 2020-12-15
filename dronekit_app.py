@@ -13,11 +13,11 @@ vehicle = connect(args.connect, baud=57600, wait_ready=True)
 
 aTargetAltitude = 10
 
-print("Basic pre-arm checks")
-# Don't let the user try to arm until autopilot is ready
-while not vehicle.is_armable:
-	print(" Waiting for vehicle to initialise...")
-	time.sleep(1)
+# print("Basic pre-arm checks")
+# # Don't let the user try to arm until autopilot is ready
+# while not vehicle.is_armable:
+# 	print(" Waiting for vehicle to initialise...")
+# 	time.sleep(1)
 
 # Display basic vehicle state
 print(" Type: %s" % vehicle._vehicle_type)
@@ -26,14 +26,14 @@ print(" System status: %s" % vehicle.system_status.state)
 print(" GPS: %s" % vehicle.gps_0)
 print(" Alt: %s" % vehicle.location.global_relative_frame.alt)
 
-# # Arm vehicle
-# print("Arming motors")
-# # Copter should arm in GUIDED mode
-# vehicle.mode = VehicleMode("GUIDED")
-# vehicle.armed = True
-# while not vehicle.armed:
-#     print(" Waiting for arming...")
-#     time.sleep(1)
+# Arm vehicle
+print("Arming motors")
+# Copter should arm in GUIDED mode
+vehicle.mode = VehicleMode("GUIDED")
+vehicle.armed = True
+while not vehicle.armed:
+    print(" Waiting for arming...")
+    time.sleep(1)
 
 # print("Taking off!")
 
