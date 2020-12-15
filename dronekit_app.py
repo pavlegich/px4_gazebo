@@ -31,6 +31,8 @@ print("Taking off!")
 
 vehicle.simple_takeoff(aTargetAltitude)
 
+time.sleep(20)
+
 #  # Check that vehicle has reached takeoff altitude
 # while True:
 # 	print(" Altitude: ", vehicle.location.global_relative_frame.alt)
