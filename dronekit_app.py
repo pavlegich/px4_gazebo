@@ -16,7 +16,7 @@ aTargetAltitude = 10
 print("Basic pre-arm checks")
 # Don't let the user try to arm until autopilot is ready
 while not vehicle.is_armable:
-	print " Waiting for vehicle to initialise..."
+	print(" Waiting for vehicle to initialise...")
 	time.sleep(1)
 
 # Display basic vehicle state
