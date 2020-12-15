@@ -4,13 +4,11 @@ import time, sys, argparse, math
 
 vehicle = mavutil.mavlink_connection('udpin:localhost:14550')
 
-armed = vehicle.motors_armed()
+vehicle.wait_heartbeat()
+lat = vehicle.messages["GPS_RAW_INT"].lat*1e-7
+lon = vehicle.messages["GPS_RAW_INT"].lon*1e-7
+alt = vehicle.messages["GPS_RAW_INT"].alt*1e-3
+sv = vehicle.messages['GPS_RAW_INT'].satellites_visible
 
-print(armed)
-
-vehicle.arducopter_arm()
-
-armed = vehicle.motors_armed()
-
-print(armed)
+print(lat,lon,alt)
 
