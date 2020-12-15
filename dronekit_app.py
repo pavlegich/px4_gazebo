@@ -22,7 +22,7 @@ print("Arming motors")
 vehicle.mode = VehicleMode("GUIDED")
 vehicle.armed = True
 while not vehicle.armed:
-    print " Waiting for arming..."
+    print(" Waiting for arming...")
     time.sleep(1)
 
 print("Taking off!")
