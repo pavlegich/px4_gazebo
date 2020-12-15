@@ -4,12 +4,12 @@ import time, sys, argparse, math
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--connect', default='127.0.0.1:11345')
+parser.add_argument('--connect', default='127.0.0.1:14550')
 args = parser.parse_args()
 
 # Connect to the Vehicle
 print('Connecting to vehicle on: %s' % args.connect)
-vehicle = connect(args.connect, baud=57600, wait_ready=True)
+vehicle = connect(args.connect, baud=115200, wait_ready=True)
 
 aTargetAltitude = 30
 
