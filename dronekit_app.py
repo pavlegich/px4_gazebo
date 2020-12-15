@@ -22,6 +22,8 @@ print(" Alt: %s" % vehicle.location.global_relative_frame.alt)
 
 # Arm vehicle
 print("Arming motors")
+# Copter should arm in GUIDED mode
+vehicle.mode = VehicleMode("GUIDED")
 vehicle.armed = True
 while not vehicle.armed:
 	print(" Waiting for arming...")
@@ -31,18 +33,16 @@ print("Taking off!")
 
 vehicle.simple_takeoff(aTargetAltitude)
 
-time.sleep(20)
+ # Check that vehicle has reached takeoff altitude
+while True:
+	print(" Altitude: ", vehicle.location.global_relative_frame.alt)
+	#Break and return from function just below target altitude.        
+	if vehicle.location.global_relative_frame.alt>=aTargetAltitude*0.95: 
+		print("Reached target altitude")
+		break
+	time.sleep(1)
 
-#  # Check that vehicle has reached takeoff altitude
-# while True:
-# 	print(" Altitude: ", vehicle.location.global_relative_frame.alt)
-# 	#Break and return from function just below target altitude.        
-# 	if vehicle.location.global_relative_frame.alt>=aTargetAltitude*0.95: 
-# 		print("Reached target altitude")
-# 		break
-# 	time.sleep(1)
-
-# print("Take off complete")
+print("Take off complete")
 
 # time.sleep(10)
 
