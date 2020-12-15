@@ -4,7 +4,7 @@ import time, sys, argparse, math
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--connect', default='127.0.0.1:14550')
+parser.add_argument('--connect', default='127.0.0.1:11345')
 args = parser.parse_args()
 
 # Connect to the Vehicle
