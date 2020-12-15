@@ -2,12 +2,22 @@ from dronekit import connect, Command, LocationGlobal, VehicleMode
 from pymavlink import mavutil
 import time, sys, argparse, math
 
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--connect', default='127.0.0.1:14550')
+args = parser.parse_args()
+
 # Connect to the Vehicle
-print("Connecting")
-connection_string = '127.0.0.1:14540'
-vehicle = connect(connection_string, wait_ready=True)
+print 'Connecting to vehicle on: %s' % args.connect
+vehicle = connect(args.connect, baud=57600, wait_ready=True)
 
 aTargetAltitude = 10
+
+print("Basic pre-arm checks")
+# Don't let the user try to arm until autopilot is ready
+while not vehicle.is_armable:
+	print " Waiting for vehicle to initialise..."
+	time.sleep(1)
 
 # Display basic vehicle state
 print(" Type: %s" % vehicle._vehicle_type)
