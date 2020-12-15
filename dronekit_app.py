@@ -13,3 +13,11 @@ print(" Armed: %s" % vehicle.armed)
 print(" System status: %s" % vehicle.system_status.state)
 print(" GPS: %s" % vehicle.gps_0)
 print(" Alt: %s" % vehicle.location.global_relative_frame.alt)
+
+# Arm vehicle
+vehicle.armed = True
+
+time.sleep(10)
+
+# Disarm vehicle
+vehicle.armed = False
