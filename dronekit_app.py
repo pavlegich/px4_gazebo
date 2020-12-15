@@ -26,38 +26,38 @@ print(" System status: %s" % vehicle.system_status.state)
 print(" GPS: %s" % vehicle.gps_0)
 print(" Alt: %s" % vehicle.location.global_relative_frame.alt)
 
-# Arm vehicle
-print("Arming motors")
-# Copter should arm in GUIDED mode
-vehicle.mode = VehicleMode("GUIDED")
-vehicle.armed = True
-while not vehicle.armed:
-    print(" Waiting for arming...")
-    time.sleep(1)
+# # Arm vehicle
+# print("Arming motors")
+# # Copter should arm in GUIDED mode
+# vehicle.mode = VehicleMode("GUIDED")
+# vehicle.armed = True
+# while not vehicle.armed:
+#     print(" Waiting for arming...")
+#     time.sleep(1)
 
-print("Taking off!")
+# print("Taking off!")
 
-vehicle.simple_takeoff(aTargetAltitude)
+# vehicle.simple_takeoff(aTargetAltitude)
 
- # Check that vehicle has reached takeoff altitude
-while True:
-	print(" Altitude: ", vehicle.location.global_relative_frame.alt)
-	#Break and return from function just below target altitude.        
-	if vehicle.location.global_relative_frame.alt>=aTargetAltitude*0.95: 
-		print("Reached target altitude")
-		break
-	time.sleep(1)
+#  # Check that vehicle has reached takeoff altitude
+# while True:
+# 	print(" Altitude: ", vehicle.location.global_relative_frame.alt)
+# 	#Break and return from function just below target altitude.        
+# 	if vehicle.location.global_relative_frame.alt>=aTargetAltitude*0.95: 
+# 		print("Reached target altitude")
+# 		break
+# 	time.sleep(1)
 
-print("Take off complete")
+# print("Take off complete")
 
-time.sleep(10)
+# time.sleep(10)
 
-print("Now let's land")
-vehicle.mode = VehicleMode("LAND")
+# print("Now let's land")
+# vehicle.mode = VehicleMode("LAND")
 
-# Disarm vehicle
-print("Motors disarming...")
-vehicle.armed = False
+# # Disarm vehicle
+# print("Motors disarming...")
+# vehicle.armed = False
 
 # Close vehicle object
 vehicle.close()
