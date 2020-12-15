@@ -15,9 +15,12 @@ print(" GPS: %s" % vehicle.gps_0)
 print(" Alt: %s" % vehicle.location.global_relative_frame.alt)
 
 # Arm vehicle
+print("Motors arming...")
 vehicle.armed = True
+
 
 time.sleep(10)
 
 # Disarm vehicle
+print("Motors disarming...")
 vehicle.armed = False
