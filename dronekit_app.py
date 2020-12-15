@@ -5,5 +5,12 @@ import time, sys, argparse, math
 vehicle = mavutil.mavlink_connection('udpin:localhost:14550')
 
 armed = vehicle.motors_armed()
+
+print(armed)
+
+vehicle.arducopter_arm()
+
+armed = vehicle.motors_armed()
+
 print(armed)
 
