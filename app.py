@@ -5,18 +5,6 @@ import asyncio
 from pymavlink import mavutil
 import time, sys, argparse, math
 
-def get_location_offset_meters(original_location, dNorth, dEast, alt):
-   
-    earth_radius=6378137.0 #Radius of "spherical" earth
-    #Coordinate offsets in radians
-    dLat = dNorth/earth_radius
-    dLon = dEast/(earth_radius*math.cos(math.pi*original_location.lat/180))
-
-    #New position in decimal degrees
-    newlat = original_location[0][0] + (dLat * 180/math.pi)
-    newlon = original_location[0][1] + (dLon * 180/math.pi)
-    return LocationGlobal(newlat, newlon,original_location.alt+alt)
-
 # Запуск моторов
 def arducopter_arm(vehicle):
 	if vehicle.motors_armed():
@@ -46,8 +34,8 @@ def arducopter_takeoff(vehicle, coordinates, altitude):
 		vehicle.target_system,
 		vehicle.target_component,
 		mavutil.mavlink.MAV_CMD_NAV_TAKEOFF,
-		0,0,0,0,0,coordinates["lat"],coordinates["lon"],
-		coordinates["alt"]+altitude)
+		0,0,0,0,0,coordinates[0][0],coordinates[0][1],
+		coordinates[0][2]+altitude)
 
 # Переместиться
 def arducopter_move(vehicle, coordinates, altitude):
@@ -56,8 +44,8 @@ def arducopter_move(vehicle, coordinates, altitude):
 		vehicle.target_system,
 		vehicle.target_component,
 		mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-		0,0,0,0,0,coordinates["lat"]+0.00001,coordinates["lon"]+0.00001,
-		coordinates["alt"]+altitude)
+		0,0,0,0,0,coordinates[0][0]+0.00001,coordinates[0][1]+0.00001,
+		coordinates[0][2]+altitude)
 
 def arducopter_hold(vehicle, location):
 	print("---Hold")
@@ -75,14 +63,17 @@ def current_location(vehicle):
 	vehicle.messages["GPS_RAW_INT"].alt*1e-3]
 
 # Проверка состояния спутникового сигнала
-def gps_check(vehicle, last, current):
+def gps_check(vehicle, last):
 	status = 1
 	vehicle.wait_heartbeat()
+	lat = vehicle.messages["GPS_RAW_INT"].lat*1e-7
+	lon = vehicle.messages["GPS_RAW_INT"].lon*1e-7
+	alt = vehicle.messages["GPS_RAW_INT"].alt*1e-3
 	st = vehicle.messages["GPS_RAW_INT"].satellites_visible
 	if (not st):
 		status = -1
-	elif (st < 7 or abs(last[0]-current[0][0])>0.000038 or abs(last[1]-current[0][1])>0.000078 \
-		 or abs(last[2]-current[0][2])>5):
+	elif (st < 7 or abs(last[0][0]-lat)>0.000038 or abs(last[0][1]-lon)>0.000078 \
+		 or abs(last[0][2]-alt)>5):
 		status = 0
 	return status, st
 
@@ -91,78 +82,67 @@ def wait_for_height(vehicle, gps0, altitude):
 	loc = [[]]
 	loc.pop(0)
 	loc.append(current_location(vehicle))
-	while (loc[0][2] - gps0["alt"] < altitude - 0.01):
-		last_gps = [loc[0][0], loc[0][1], loc[0][2]]
+	while (loc[0][2] - gps0[0][2] < altitude - 0.01):
+		# last_gps = [[loc[0][0], loc[0][1], loc[0][2]]]
 		loc.pop(0)
 		loc.append(current_location(vehicle))
-		print(round(loc[0][2] - gps0["alt"],2), "m")
-		print(gps_check(vehicle, last_gps, loc))
-		# print("satellites_visible:", gps_check(vehicle)[1]) #10
-		# print("lat:", abs(loc[0][0]-last[0]), " lon:", \
-		# abs(loc[0][1]-last[1]), " alt:", abs(loc[0][2]-last[2]))
+		print(round(loc[0][2] - gps0[0][2],2), "m")
+		# print(gps_check(vehicle, last_gps))
 		time.sleep(0.3)
+	print("---Height reached")
 	return loc
 
 # Ожидание нужной высоты при приземлении
-def wait_for_height_down(vehicle, gps0):
+def wait_for_landing(vehicle, gps0):
 	loc = [[]]
 	loc.pop(0)
 	loc.append(current_location(vehicle))
-	while (loc[0][2] > gps0["alt"] + 0.01):
-		last_gps = [loc[0][0], loc[0][1], loc[0][2]]
+	while (loc[0][2] > gps0[0][2] + 0.01):
+		# last_gps = [[loc[0][0], loc[0][1], loc[0][2]]]
 		loc.pop(0)
 		loc.append(current_location(vehicle))
-		print(round(loc[0][2] - gps0["alt"],2), "m")
-		print(gps_check(vehicle, last_gps, loc))
-		# print("satellites_visible:", gps_check(vehicle)[1])
-		# print("lat:", abs(loc[0][0]-last[0]), " lon:", \
-		# abs(loc[0][1]-last[1]), " alt:", abs(loc[0][2]-last[2]))
+		print(round(loc[0][2] - gps0[0][2],2), "m")
+		# print(gps_check(vehicle, last_gps))
 		time.sleep(0.3)
+	print("---Landed")
 	return loc
 
 
 
 async def run():
 
-	gps0 = {"lat" : 0, "lon" : 0, "alt" : 0} # Начальные координаты
+	gps0 = [[0, 0, 0]] # Начальные координаты
 	altitude = 5 # Высота взлета
 	altitude_goal = 3
+	location = [[0, 0, 0]]
 
 	# Соединение с БВС, получение начальных координат
 	vehicle = mavutil.mavlink_connection('udpin:localhost:14540')
 	vehicle.wait_heartbeat()
-	gps0["lat"] = vehicle.messages["GPS_RAW_INT"].lat*1e-7
-	gps0["lon"] = vehicle.messages["GPS_RAW_INT"].lon*1e-7
-	gps0["alt"] = vehicle.messages["GPS_RAW_INT"].alt*1e-3
+	gps0[0][0] = vehicle.messages["GPS_RAW_INT"].lat*1e-7
+	gps0[0][1] = vehicle.messages["GPS_RAW_INT"].lon*1e-7
+	gps0[0][2] = vehicle.messages["GPS_RAW_INT"].alt*1e-3
 
+	st = gps_check(vehicle, gps0)
 
-
-	# st = gps_check(vehicle, gps0, gps0)
-
-	print("Latitude:", round(gps0["lat"],2))
-	print("Longitude:", round(gps0["lon"],2))
-	print("Altitude:", round(gps0["alt"],2), "m")
-	# print("GPS Status:", st)
+	print("latitude:", round(gps0[0][0],2))
+	print("longitude:", round(gps0[0][1],2))
+	print("altitude:", round(gps0[0][2],2), "m")
+	print("gps_status:", st[0])
+	print("satellites_visible:", st[1])
 	print("\n=========\n")
 	
 	arducopter_arm(vehicle) # Запуск моторов
-	# t0 = time.time()
 	arducopter_takeoff(vehicle, gps0, altitude) # Взлет
 	
 	location = wait_for_height(vehicle, gps0, altitude_goal) # Текущее положение
-	# t1 = time.time()
-	# time_takeoff  = t1 - t0
-	# print("Takeoff time:", time_takeoff, "sec")
-
-	arducopter_move(vehicle, gps0, altitude)
+	print("current_location:", [round(v,2) for v in location[0]])
+	# arducopter_move(vehicle, gps0, altitude)
 
 	# arducopter_hold(vehicle, location)
-	# t0 = time.time()
 	arducopter_land(vehicle) # Посадка
-	location = wait_for_height_down(vehicle, gps0)
-	# t1 = time.time()
-	# time_land  = t1 - t0
-	# print("Land time:", time_land, "sec")
+	location = wait_for_landing(vehicle, gps0)
+	print("current_location:", [round(v,2) for v in location[0]])
 
 if __name__ == "__main__":
 	loop = asyncio.get_event_loop()
