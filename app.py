@@ -47,13 +47,13 @@ def arducopter_move(vehicle, coordinates, altitude):
 		0,0,0,0,0,coordinates[0][0]+0.00001,coordinates[0][1]+0.00001,
 		coordinates[0][2]+altitude)
 
-def arducopter_hold(vehicle, location):
+def arducopter_hold(vehicle):
 	print("---Hold")
 	vehicle.mav.command_long_send(
 		vehicle.target_system,
 		vehicle.target_component,
-		mavutil.mavlink.MAV_CMD_NAV_LOITER_UNLIM,
-		0,0,0,0,0,location[0][0],location[0][1],location[0][2])
+		mavutil.mavlink.MAV_CMD_NAV_DELAY,
+		0,0,0,0,0,0,0,0)
 
 # Текущая локация
 def current_location(vehicle):
@@ -82,13 +82,14 @@ def wait_for_height(vehicle, gps0, altitude):
 	loc = [[]]
 	loc.pop(0)
 	loc.append(current_location(vehicle))
-	while (loc[0][2] - gps0[0][2] < altitude - 0.01):
+	while (loc[0][2] - gps0[0][2] < altitude - 0.03):
 		# last_gps = [[loc[0][0], loc[0][1], loc[0][2]]]
 		loc.pop(0)
 		loc.append(current_location(vehicle))
 		print(round(loc[0][2] - gps0[0][2],2), "m")
 		# print(gps_check(vehicle, last_gps))
 		time.sleep(0.3)
+	vehicle.set_mode_apm(2)
 	print("---Height reached")
 	return loc
 
@@ -97,7 +98,7 @@ def wait_for_landing(vehicle, gps0):
 	loc = [[]]
 	loc.pop(0)
 	loc.append(current_location(vehicle))
-	while (loc[0][2] > gps0[0][2] + 0.01):
+	while (loc[0][2] > gps0[0][2] + 0.015):
 		# last_gps = [[loc[0][0], loc[0][1], loc[0][2]]]
 		loc.pop(0)
 		loc.append(current_location(vehicle))
@@ -112,8 +113,8 @@ def wait_for_landing(vehicle, gps0):
 async def run():
 
 	gps0 = [[0, 0, 0]] # Начальные координаты
-	altitude = 5 # Высота взлета
-	altitude_goal = 3
+	altitude = 6 # Высота взлета
+	altitude_goal = 4
 	location = [[0, 0, 0]]
 
 	# Соединение с БВС, получение начальных координат
@@ -138,6 +139,23 @@ async def run():
 	location = wait_for_height(vehicle, gps0, altitude_goal) # Текущее положение
 	print("current_location:", [round(v,2) for v in location[0]])
 	# arducopter_move(vehicle, gps0, altitude)
+	# arducopter_hold(vehicle)
+
+	t1 = time.time()
+	interval = 0
+	while (interval < 10):
+		location.pop(0)
+		location.append(current_location(vehicle))
+		check = gps_check(vehicle, location)
+		if check[0] != 1:
+			if check[0] == 0:
+				print("GPS unstable!")
+			else:
+				print("GPS lost!")
+				arducopter_land(vehicle)
+		t2 = time.time()
+		interval = t2 - t1
+		time.sleep(0.3)
 
 	# arducopter_hold(vehicle, location)
 	arducopter_land(vehicle) # Посадка
