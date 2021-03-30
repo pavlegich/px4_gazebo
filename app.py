@@ -63,7 +63,7 @@ def current_location(vehicle):
 	vehicle.messages["GPS_RAW_INT"].alt*1e-3]
 
 # Проверка состояния спутникового сигнала
-def gps_check(vehicle, last):
+def gps_status(vehicle, last):
 	status = 1
 	vehicle.wait_heartbeat()
 	lat = vehicle.messages["GPS_RAW_INT"].lat*1e-7
@@ -87,11 +87,9 @@ def wait_for_height(vehicle, gps0, altitude):
 		loc.pop(0)
 		loc.append(current_location(vehicle))
 		print(round(loc[0][2] - gps0[0][2],2), "m")
-		# print(gps_check(vehicle, last_gps))
+		# print(gps_status(vehicle, last_gps))
 		time.sleep(0.3)
-	vehicle.set_mode_apm(2)
 	print("---Height reached")
-	return loc
 
 # Ожидание нужной высоты при приземлении
 def wait_for_landing(vehicle, gps0):
@@ -103,19 +101,29 @@ def wait_for_landing(vehicle, gps0):
 		loc.pop(0)
 		loc.append(current_location(vehicle))
 		print(round(loc[0][2] - gps0[0][2],2), "m")
-		# print(gps_check(vehicle, last_gps))
+		# print(gps_status(vehicle, last_gps))
 		time.sleep(0.3)
 	print("---Landed")
-	return loc
 
-
+# Проверка статуса сигнала
+def gps_check(vehicle):
+	loc = [[]]
+	loc.pop(0)
+	loc.append(current_location(vehicle))
+	check = gps_status(vehicle, loc)
+	if check[0] != 1:
+		if check[0] == 0:
+			print("GPS unstable!")
+		else:
+			print("GPS lost!")
+			time.sleep(3)
+			arducopter_land(vehicle)
 
 async def run():
 
 	gps0 = [[0, 0, 0]] # Начальные координаты
 	altitude = 6 # Высота взлета
 	altitude_goal = 4
-	location = [[0, 0, 0]]
 
 	# Соединение с БВС, получение начальных координат
 	vehicle = mavutil.mavlink_connection('udpin:localhost:14540')
@@ -124,7 +132,7 @@ async def run():
 	gps0[0][1] = vehicle.messages["GPS_RAW_INT"].lon*1e-7
 	gps0[0][2] = vehicle.messages["GPS_RAW_INT"].alt*1e-3
 
-	st = gps_check(vehicle, gps0)
+	st = gps_status(vehicle, gps0)
 
 	print("latitude:", round(gps0[0][0],2))
 	print("longitude:", round(gps0[0][1],2))
@@ -136,31 +144,24 @@ async def run():
 	arducopter_arm(vehicle) # Запуск моторов
 	arducopter_takeoff(vehicle, gps0, altitude) # Взлет
 	
-	location = wait_for_height(vehicle, gps0, altitude_goal) # Текущее положение
-	print("current_location:", [round(v,2) for v in location[0]])
+	wait_for_height(vehicle, gps0, altitude_goal) # Текущее положение
+	vehicle.set_mode_apm(2)
+	print("current_location:", [round(v,2) for v in current_location(vehicle)])
 	# arducopter_move(vehicle, gps0, altitude)
 	# arducopter_hold(vehicle)
 
 	t1 = time.time()
 	interval = 0
 	while (interval < 10):
-		location.pop(0)
-		location.append(current_location(vehicle))
-		check = gps_check(vehicle, location)
-		if check[0] != 1:
-			if check[0] == 0:
-				print("GPS unstable!")
-			else:
-				print("GPS lost!")
-				arducopter_land(vehicle)
+		gps_check(vehicle)
 		t2 = time.time()
 		interval = t2 - t1
 		time.sleep(0.3)
 
 	# arducopter_hold(vehicle, location)
 	arducopter_land(vehicle) # Посадка
-	location = wait_for_landing(vehicle, gps0)
-	print("current_location:", [round(v,2) for v in location[0]])
+	wait_for_landing(vehicle, gps0)
+	print("current_location:", [round(v,2) for v in current_location(vehicle)])
 
 if __name__ == "__main__":
 	loop = asyncio.get_event_loop()
