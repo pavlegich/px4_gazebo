@@ -122,8 +122,8 @@ def gps_check(vehicle):
 async def run():
 
 	gps0 = [[0, 0, 0]] # Начальные координаты
-	altitude = 6 # Высота взлета
-	altitude_goal = 4
+	altitude = 7 # Высота взлета
+	altitude_goal = 5
 
 	# Соединение с БВС, получение начальных координат
 	vehicle = mavutil.mavlink_connection('udpin:localhost:14540')
@@ -145,6 +145,7 @@ async def run():
 	arducopter_takeoff(vehicle, gps0, altitude) # Взлет
 	
 	wait_for_height(vehicle, gps0, altitude_goal) # Текущее положение
+	time.sleep(0.5)
 	vehicle.set_mode_apm(2)
 	print("current_location:", [round(v,2) for v in current_location(vehicle)])
 	# arducopter_move(vehicle, gps0, altitude)
