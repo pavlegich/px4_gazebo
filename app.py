@@ -60,46 +60,60 @@ def gps_status(vehicle, last):
 	return status, st
 
 # Проверка статуса сигнала
-def gps_check(vehicle):
+def gps_check(vehicle, f1, f2, lid0):
 	loc = current_location(vehicle)
 	time.sleep(1)
 	check = gps_status(vehicle, loc)
 	if check[0] != 1:
 		if check[0] == -1:
-			gps_ale = 0
-			if gps_err < 5:
+			f1 = 0
+			if f2 < 5:
 				print("GPS lost!")
-				gps_err += 1
-			elif gps_err < 12:
+				f2 += 1
+			elif f2 < 12:
 				vehicle.set_mode_apm(2)
 				print("Prepare landing!")
-				gps_err += 1
+				f2 += 1
 			else:
-				emergency_landing(vehicle)
+				emergency_landing(vehicle, lid0)
 		else:
-			gps_err = 0
-			if gps_ale < 5:
+			f2 = 0
+			if f1 < 5:
 				print("GPS unstable!")
-				gps_ale += 1
+				f1 += 1
 			else:
 				print("GPS unstable! Manual control recommended!")
-				gps_ale += 1
+				f1 += 1
 	else:
-		gps_ale = 0
-		gps_err = 0
+		f1 = 0
+		f2 = 0
+	return f1, f2
 
 # Экстренная посадка
-def emergency_landing(vehicle):
+def emergency_landing(vehicle, lid0):
+	print("---Emergency landing")
+	print("LiDAR used...")
 	vehicle.set_mode_rtl()
+	vehicle.wait_heartbeat()
 	f = vehicle.motors_armed()
 	t = 0
+	l = 0
 	while f:
+		vehicle.wait_heartbeat()
+		ground_distance = vehicle.messages["DISTANCE_SENSOR"].current_distance*1e-2 - lid0
+		if not l:
+			print(round(ground_distance, 2), "m")
+			if ground_distance == 0:
+				print("---Landed")
+				l = 1
 		f = vehicle.motors_armed()
 		t += 1
 		if t > 10 and t <= 20:
 			print("Motors still armed!")
 		elif t > 20:
 			print("Motors still armed! Manual control recommended!")
+		time.sleep(0.3)
+	print("---Disarmed")
 
 # Ожидание нужной высоты
 def wait_for_height(vehicle, gps0, altitude):
@@ -128,11 +142,14 @@ async def run():
 	altitude = 4 # Высота взлета
 	altitude_goal = 3
 
+	gps_ale = 0
+	gps_err = 0
+
 	# Соединение с БВС, получение начальных координат
 	vehicle = mavutil.mavlink_connection('udpin:localhost:14540')
 	vehicle.wait_heartbeat()
 	gps0 = current_location(vehicle) # Начальные координаты
-
+	lid0 = vehicle.messages["DISTANCE_SENSOR"].current_distance*1e-2
 	st = gps_status(vehicle, gps0)
 
 	print("latitude:", round(gps0[0],2))
@@ -141,7 +158,7 @@ async def run():
 	print("gps_status:", st[0])
 	print("satellites_visible:", st[1])
 	print("\n=========\n")
-	
+
 	arducopter_arm(vehicle) # Запуск моторов
 	arducopter_takeoff(vehicle, gps0, altitude) # Взлет
 	
@@ -153,13 +170,16 @@ async def run():
 	t1 = time.time()
 	interval = 0
 	while (interval < 10):
-		gps_check(vehicle)
+		f = gps_check(vehicle, gps_ale, gps_err, lid0)
+		gps_ale = f[0]
+		gps_err = f[1]
 		t2 = time.time()
 		interval = t2 - t1
 		time.sleep(0.3)
 
-	arducopter_land(vehicle) # Посадка
-	wait_for_landing(vehicle, gps0)
+	# arducopter_land(vehicle)
+	emergency_landing(vehicle, lid0) # Посадка
+	# wait_for_landing(vehicle, gps0)
 	print("current_location:", [round(v,2) for v in current_location(vehicle)])
 
 if __name__ == "__main__":
