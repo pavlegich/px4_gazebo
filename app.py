@@ -148,6 +148,7 @@ async def run():
 	# Соединение с БВС, получение начальных координат
 	vehicle = mavutil.mavlink_connection('udpin:localhost:14540')
 	vehicle.wait_heartbeat()
+	arducopter_arm(vehicle) # Запуск моторов
 	gps0 = current_location(vehicle) # Начальные координаты
 	lid0 = vehicle.messages["DISTANCE_SENSOR"].current_distance*1e-2
 	st = gps_status(vehicle, gps0)
@@ -159,7 +160,6 @@ async def run():
 	print("satellites_visible:", st[1])
 	print("\n=========\n")
 
-	arducopter_arm(vehicle) # Запуск моторов
 	arducopter_takeoff(vehicle, gps0, altitude) # Взлет
 	
 	wait_for_height(vehicle, gps0, altitude_goal) # Текущее положение
