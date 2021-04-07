@@ -5,9 +5,6 @@ import asyncio
 from pymavlink import mavutil
 import time, sys, argparse, math
 
-gps_ale = 0
-gps_err = 0
-
 # Запуск моторов
 def arducopter_arm(vehicle):
 	if vehicle.motors_armed():
@@ -49,7 +46,7 @@ def current_location(vehicle):
 
 # Проверка состояния спутникового сигнала
 def gps_status(vehicle, last):
-	status = 1
+	status = -1
 	loc = current_location(vehicle)
 	st = vehicle.messages["GPS_RAW_INT"].satellites_visible
 	if (not st):
@@ -62,7 +59,6 @@ def gps_status(vehicle, last):
 # Проверка статуса сигнала
 def gps_check(vehicle, f1, f2, lid0):
 	loc = current_location(vehicle)
-	time.sleep(1)
 	check = gps_status(vehicle, loc)
 	if check[0] != 1:
 		if check[0] == -1:
@@ -108,12 +104,13 @@ def emergency_landing(vehicle, lid0):
 				l = 1
 		f = vehicle.motors_armed()
 		t += 1
-		if t > 10 and t <= 20:
-			print("Motors still armed!")
-		elif t > 20:
-			print("Motors still armed! Manual control recommended!")
+		if t >= 15 and t < 25:
+			if t == 15 or t == 20:
+				print("Motors still armed!")
+		elif t >= 25 and t <= 30:
+			if t == 25 or t == 30:
+				print("Motors still armed! Manual control recommended!")
 		time.sleep(0.3)
-	print("---Disarmed")
 
 # Ожидание нужной высоты
 def wait_for_height(vehicle, gps0, altitude):
@@ -123,7 +120,10 @@ def wait_for_height(vehicle, gps0, altitude):
 		loc = current_location(vehicle)
 		print(round(loc[2] - gps0[2],2), "m")
 		# print(gps_status(vehicle, last_gps))
-		time.sleep(0.3)
+		# time.sleep(0.3)
+		if not vehicle.motors_armed():
+			arducopter_arm(vehicle)
+			arducopter_takeoff(vehicle, gps0, altitude+1)
 	print("---Height reached")
 
 # Ожидание нужной высоты при приземлении
@@ -163,22 +163,24 @@ async def run():
 	arducopter_takeoff(vehicle, gps0, altitude) # Взлет
 	
 	wait_for_height(vehicle, gps0, altitude_goal) # Текущее положение
+	time.sleep(1)
 	vehicle.set_mode_apm(2)
 	
 	print("current_location:", [round(v,2) for v in current_location(vehicle)])
 
-	t1 = time.time()
-	interval = 0
-	while (interval < 10):
+	while (True):
 		f = gps_check(vehicle, gps_ale, gps_err, lid0)
 		gps_ale = f[0]
 		gps_err = f[1]
-		t2 = time.time()
-		interval = t2 - t1
-		time.sleep(0.3)
+		vehicle.wait_heartbeat()
+		vehicle.set_mode_apm(2)
+		if not vehicle.motors_armed():
+			print("---Disarmed")
+			break
+		# time.sleep(0.3)
 
 	# arducopter_land(vehicle)
-	emergency_landing(vehicle, lid0) # Посадка
+	# emergency_landing(vehicle, lid0) # Посадка
 	# wait_for_landing(vehicle, gps0)
 	print("current_location:", [round(v,2) for v in current_location(vehicle)])
 
